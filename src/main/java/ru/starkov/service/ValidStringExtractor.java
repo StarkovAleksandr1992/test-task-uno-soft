@@ -1,0 +1,43 @@
+package ru.starkov.service;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class ValidStringExtractor {
+
+    public List<List<String>> getValidStrings(File file) {
+        Objects.requireNonNull(file, "File can't be null");
+        try (final var bufferedReader = new BufferedReader(new FileReader(file))) {
+            final var validStringPredicate = new ValidStringPredicate();
+            return bufferedReader.lines()
+                    .map(s -> s.split(";"))
+                    .map(Arrays::asList)
+                    .filter(strings -> strings.stream().allMatch(validStringPredicate))
+                    .map(strings -> strings.stream()
+                            .map(s -> s.replaceAll("\"", ""))
+                            .toList())
+                    .toList();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static class ValidStringPredicate implements Predicate<String> {
+
+        private static final Pattern STRING_PATTERN = Pattern.compile("^\"\\d+\"$|^\"\"$");
+
+        @Override
+        public boolean test(String s) {
+            Matcher matcher = STRING_PATTERN.matcher(s);
+            return matcher.matches();
+        }
+    }
+}
