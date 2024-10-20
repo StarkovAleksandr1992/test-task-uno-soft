@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * A class that implements the Union-Find (or Disjoint Set Union) data structure to group rows of strings
@@ -19,47 +20,63 @@ public class UnionFind {
 
     public UnionFind(List<List<Long>> rawData) {
         this.rawData = rawData;
-        int size = rawData.size();
-        parent = new int[size];
-        for (int i = 0; i < size; i++) {
-            parent[i] = i;
-        }
+        this.parent = initializeParents(rawData.size());
         initializeUnionFind();
     }
 
+    public List<List<List<Long>>> groupValues() {
+        Map<Integer, List<List<Long>>> groupedRows = groupRowsByRoot();
+        sortGroups(groupedRows);
+        return groupedRows.values()
+                .stream()
+                .sorted(this::compareGroups)
+                .collect(Collectors.toList());
+    }
+
+    private int[] initializeParents(int size) {
+        int[] parents = new int[size];
+        for (int i = 0; i < size; i++) {
+            parents[i] = i;
+        }
+        return parents;
+    }
+
     private void initializeUnionFind() {
-        int rowCount = rawData.size();
-        for (int i = 0; i < rowCount; i++) {
-            final var columns = rawData.get(i);
-            for (int colIndex = 0; colIndex < columns.size(); colIndex++) {
-                Long value = columns.get(colIndex);
-                if (value != 0L) {
-                    final var key = new Key(colIndex, value);
-                    if (!columnValueToIndex.containsKey(key)) {
-                        columnValueToIndex.put(key, i);
-                    } else {
-                        int existingRow = columnValueToIndex.get(key);
-                        union(i, existingRow);
-                    }
-                }
+        for (int rowIndex = 0; rowIndex < rawData.size(); rowIndex++) {
+            processRow(rowIndex, rawData.get(rowIndex));
+        }
+    }
+
+    private void processRow(int rowIndex, List<Long> columns) {
+        for (int colIndex = 0; colIndex < columns.size(); colIndex++) {
+            Long value = columns.get(colIndex);
+            if (value != 0L) {
+                handleNonEmptyValue(rowIndex, colIndex, value);
             }
         }
     }
 
-    public int find(int index) {
+    private void handleNonEmptyValue(int rowIndex, int colIndex, Long value) {
+        Key key = new Key(colIndex, value);
+        columnValueToIndex.putIfAbsent(key, rowIndex);
+        int existingRow = columnValueToIndex.get(key);
+        union(rowIndex, existingRow);
+    }
+
+    private int find(int index) {
         int root = index;
         while (parent[root] != root) {
             root = parent[root];
         }
         while (index != root) {
-            int parentOfX = parent[index];
+            int next = parent[index];
             parent[index] = root;
-            index = parentOfX;
+            index = next;
         }
         return root;
     }
 
-    public void union(int x, int y) {
+    private void union(int x, int y) {
         int rootX = find(x);
         int rootY = find(y);
         if (rootX != rootY) {
@@ -67,14 +84,30 @@ public class UnionFind {
         }
     }
 
-    public Map<Integer, List<List<Long>>> groupValues() {
+    private Map<Integer, List<List<Long>>> groupRowsByRoot() {
         Map<Integer, List<List<Long>>> groups = new HashMap<>();
-        int rowCount = rawData.size();
-        for (int i = 0; i < rowCount; i++) {
+        for (int i = 0; i < rawData.size(); i++) {
             int root = find(i);
             groups.computeIfAbsent(root, k -> new ArrayList<>()).add(rawData.get(i));
         }
         return groups;
+    }
+
+    private void sortGroups(Map<Integer, List<List<Long>>> groups) {
+        groups.values().forEach(group ->
+                group.sort((l1, l2) -> Integer.compare(l2.size(), l1.size()))
+        );
+    }
+
+    private int compareGroups(List<List<Long>> group1, List<List<Long>> group2) {
+        int groupCountComparison = Integer.compare(group2.size(), group1.size());
+        if (groupCountComparison != 0) {
+            return groupCountComparison;
+        }
+
+        long elementCountGroup1 = group1.stream().mapToLong(List::size).sum();
+        long elementCountGroup2 = group2.stream().mapToLong(List::size).sum();
+        return Long.compare(elementCountGroup2, elementCountGroup1);
     }
 
     private record Key(Integer colIndex, Long value) {
