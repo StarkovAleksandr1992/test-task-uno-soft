@@ -30,8 +30,11 @@ public class Main {
         fileWriter.writeToTxtFile(groupedValues,
                 "Output.txt",
                 Duration.between(startTime, endTime));
-
-        System.out.printf("Job done. Execution time: %d seconds",
+        System.out.printf("Job done. Execution time: %d seconds%n",
                 Duration.between(startTime, LocalTime.now()).get(ChronoUnit.SECONDS));
+        System.out.printf("Number of groups with more than 1 element: %d%n", groupedValues.stream()
+                .filter(longs -> longs.size() > 1)
+                .count());
+
     }
 }
