@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -18,7 +17,7 @@ import java.util.stream.Collectors;
  * <p>
  * If the output path is not specified, the file will be created in the current directory.
  */
-public class LocalPathFileWriter implements PathFileWriter<Map<Integer, List<List<Long>>>> {
+public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>>> {
 
     private static final String FORMATTED_EMPTY_STRING = "\"           \"";
     private static final String FORMATTED_VALUE_STRING = "\"%d\"";
@@ -36,26 +35,25 @@ public class LocalPathFileWriter implements PathFileWriter<Map<Integer, List<Lis
      * @throws IOException if an I/O error occurs during file writing
      */
     @Override
-    public void writeToTxtFile(Map<Integer, List<List<Long>>> groups, String outputPath, Duration executionTime) throws IOException {
+    public void writeToTxtFile(List<List<List<Long>>> groups, String outputPath, Duration executionTime) throws IOException {
         String filePath = Optional.ofNullable(outputPath)
                 .filter(path -> !path.isEmpty())
                 .orElse(DEFAULT_OUTPUT_FILE);
 
-        List<List<List<Long>>> sortedGroups = groups.values().stream()
-                .sorted((l1, l2) -> Integer.compare(l2.size(), l1.size()))
-                .toList();
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             int groupCounter = 1;
-            long groupsWithTwoOrMoreElements = groups.values().stream()
+
+            long groupsWithTwoOrMoreElements = groups.stream()
                     .filter(longs -> longs.size() > 1)
                     .count();
 
             writer.write(String.format("Number of groups with more than 1 element: %d%n", groupsWithTwoOrMoreElements));
             writer.write(String.format("Execution time (excluding file writing): %d seconds%n",
                     executionTime.get(ChronoUnit.SECONDS)));
+            writer.write(System.lineSeparator());
 
-            for (List<List<Long>> group : sortedGroups) {
+            for (List<List<Long>> group : groups) {
                 writeGroup(writer, group, groupCounter++);
             }
         } catch (IOException e) {
@@ -67,8 +65,8 @@ public class LocalPathFileWriter implements PathFileWriter<Map<Integer, List<Lis
     /**
      * Writes a single group to the file.
      *
-     * @param writer      the BufferedWriter used for file output
-     * @param group       the list of lists representing the group
+     * @param writer       the BufferedWriter used for file output
+     * @param group        the list of lists representing the group
      * @param groupCounter the number of the group
      * @throws IOException if an I/O error occurs during writing
      */
