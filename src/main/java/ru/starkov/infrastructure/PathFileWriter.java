@@ -1,6 +1,7 @@
 package ru.starkov.infrastructure;
 
 import java.io.IOException;
+import java.time.Duration;
 
 /**
  * Interface for writing objects to a file at a specified path.
@@ -20,5 +21,5 @@ public interface PathFileWriter<T> {
      * @param outputPath the path to the output file; if null or empty, the file will be created in the current directory
      * @throws IOException if an I/O error occurs
      */
-    void writeToTxtFile(T t, String outputPath) throws IOException;
+    void writeToTxtFile(T t, String outputPath, Duration executionTime) throws IOException;
 }
