@@ -40,7 +40,6 @@ public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>
                 .filter(path -> !path.isEmpty())
                 .orElse(DEFAULT_OUTPUT_FILE);
 
-
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             int groupCounter = 1;
 
@@ -57,7 +56,7 @@ public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>
                 writeGroup(writer, group, groupCounter++);
             }
         } catch (IOException e) {
-            System.err.println("Error writing to file: " + filePath);
+            System.err.printf("Error writing to file: %s", filePath);
             throw e;
         }
     }

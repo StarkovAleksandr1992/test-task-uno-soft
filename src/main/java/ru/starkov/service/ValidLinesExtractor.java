@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 public class ValidLinesExtractor {
 
-    public List<List<Long>> getValidNumbers(File file) {
+    public List<List<Long>> getValidNumbers(File file) throws IOException {
         Objects.requireNonNull(file, "File can't be null");
         try (final var bufferedReader = new BufferedReader(new FileReader(file))) {
             final var validStringPredicate = new ValidStringPredicate();
@@ -27,7 +27,8 @@ public class ValidLinesExtractor {
                     .distinct()
                     .toList();
         } catch (IOException e) {
-            throw new RuntimeException("Error reading file: " + file.getAbsolutePath(), e);
+            System.err.printf("Error reading file: %s", file.getAbsolutePath());
+            throw e;
         }
     }
 
