@@ -23,8 +23,8 @@ public class ValidLinesExtractor {
                     .map(strings -> strings.stream()
                             .map(s -> s.replaceAll("\"", ""))
                             .map(this::parseStringToLong)
-                            .distinct()
                             .toList())
+                    .distinct()
                     .toList();
         } catch (IOException e) {
             throw new RuntimeException("Error reading file: " + file.getAbsolutePath(), e);
