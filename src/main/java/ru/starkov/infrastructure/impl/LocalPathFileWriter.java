@@ -5,7 +5,11 @@ import ru.starkov.infrastructure.PathFileWriter;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.*;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -14,52 +18,77 @@ import java.util.stream.Collectors;
  * <p>
  * If the output path is not specified, the file will be created in the current directory.
  */
-public class LocalPathFileWriter implements PathFileWriter<Map<Integer, Set<List<String>>>> {
+public class LocalPathFileWriter implements PathFileWriter<Map<Integer, List<List<Long>>>> {
 
     private static final String FORMATTED_EMPTY_STRING = "\"           \"";
-    private static final String FORMATTED_VALUE_STRING = "\"%s\"";
+    private static final String FORMATTED_VALUE_STRING = "\"%d\"";
     private static final String DEFAULT_OUTPUT_FILE = "output.txt";
+
     /**
-     * Writes a Map of integer keys and Set of List of Strings to a file.
+     * Writes a Map of integer keys and Set of List of Longs to a file.
      * The groups are sorted by size in descending order, and each list is
      * formatted by wrapping its elements in quotes.
      * <p>
      * If the output path is not specified, the file will be created in the current directory.
      *
-     * @param groups the map of groups to write to the file
+     * @param groups     the map of groups to write to the file
      * @param outputPath the path to the output file; if null or empty, the file will be created in the current directory
      * @throws IOException if an I/O error occurs during file writing
      */
     @Override
-    public void writeToTxtFile(Map<Integer, Set<List<String>>> groups, String outputPath) throws IOException {
-        final var filePath = Optional.ofNullable(outputPath)
+    public void writeToTxtFile(Map<Integer, List<List<Long>>> groups, String outputPath, Duration executionTime) throws IOException {
+        String filePath = Optional.ofNullable(outputPath)
                 .filter(path -> !path.isEmpty())
                 .orElse(DEFAULT_OUTPUT_FILE);
 
-        final var sortedGroups = groups.values().stream()
+        List<List<List<Long>>> sortedGroups = groups.values().stream()
                 .sorted((l1, l2) -> Integer.compare(l2.size(), l1.size()))
                 .toList();
 
-        try (final var writer = new BufferedWriter(new FileWriter(filePath))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             int groupCounter = 1;
-            for (final var group : sortedGroups) {
+            long groupsWithTwoOrMoreElements = groups.values().stream()
+                    .filter(longs -> longs.size() > 1)
+                    .count();
+
+            writer.write(String.format("Number of groups with more than 1 element: %d%n", groupsWithTwoOrMoreElements));
+            writer.write(String.format("Execution time (excluding file writing): %d seconds%n",
+                    executionTime.get(ChronoUnit.SECONDS)));
+
+            for (List<List<Long>> group : sortedGroups) {
                 writeGroup(writer, group, groupCounter++);
             }
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + filePath);
+            throw e;
         }
-
     }
 
-    private void writeGroup(BufferedWriter writer, Set<List<String>> group, int groupCounter) throws IOException {
-        writer.write("Group " + groupCounter + "\n");
-        for (final var line : group) {
-            writer.write(formatLine(line) + "\n");
+    /**
+     * Writes a single group to the file.
+     *
+     * @param writer      the BufferedWriter used for file output
+     * @param group       the list of lists representing the group
+     * @param groupCounter the number of the group
+     * @throws IOException if an I/O error occurs during writing
+     */
+    private void writeGroup(BufferedWriter writer, List<List<Long>> group, int groupCounter) throws IOException {
+        writer.write(String.format("Group %d:%n", groupCounter));
+        for (List<Long> line : group) {
+            writer.write(formatLine(line) + System.lineSeparator());
         }
-        writer.write("\n");
+        writer.write(System.lineSeparator());  // Add an empty line between groups for readability
     }
 
-    private String formatLine(List<String> line) {
+    /**
+     * Formats a single line by wrapping its elements in quotes.
+     *
+     * @param line the list of Longs to format
+     * @return a formatted string of the line
+     */
+    private String formatLine(List<Long> line) {
         return line.stream()
-                .map(element -> element.isEmpty() ? FORMATTED_EMPTY_STRING : FORMATTED_VALUE_STRING.formatted(element))
+                .map(element -> element == 0L ? FORMATTED_EMPTY_STRING : String.format(FORMATTED_VALUE_STRING, element))
                 .collect(Collectors.joining(";"));
     }
 }
