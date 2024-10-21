@@ -9,9 +9,23 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+/**
+ * The {@code ValidLinesExtractor} class is responsible for extracting valid lines from a file,
+ * processing them, and converting the valid strings into a list of {@code Long} numbers.
+ * Each line in the file is expected to be a semicolon-separated string of quoted numbers.
+ */
 public class ValidLinesExtractor {
 
+    /**
+     * Reads a file and extracts valid numbers. Each line of the file is split by semicolons
+     * and processed to extract strings that match a specific pattern (i.e., quoted numbers).
+     * Valid strings are converted into {@code Long} and returned as a list of lists of numbers.
+     *
+     * @param file the input file to read
+     * @return a list of lists containing valid {@code Long} numbers extracted from the file
+     * @throws IOException if an I/O error occurs during reading the file
+     * @throws NullPointerException if the input file is {@code null}
+     */
     public List<List<Long>> getValidNumbers(File file) throws IOException {
         Objects.requireNonNull(file, "File can't be null");
         try (final var bufferedReader = new BufferedReader(new FileReader(file))) {
@@ -38,7 +52,10 @@ public class ValidLinesExtractor {
         }
         return Long.parseLong(s);
     }
-
+    /**
+     * A {@code Predicate} that tests whether a string matches a valid pattern.
+     * The valid pattern is a quoted number (e.g., "123").
+     */
     public static class ValidStringPredicate implements Predicate<String> {
 
         private static final Pattern STRING_PATTERN = Pattern.compile("^\"\\d*\"$");

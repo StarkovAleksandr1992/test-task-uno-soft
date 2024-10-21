@@ -18,12 +18,23 @@ public class UnionFind {
     private final int[] parent;
     private final List<List<Long>> rawData;
 
+    /**
+     * Constructs an instance of the UnionFind class for the given raw data.
+     *
+     * @param rawData a list of lists where each inner list represents a row of data, and each element is a column value.
+     */
     public UnionFind(List<List<Long>> rawData) {
         this.rawData = rawData;
         this.parent = initializeParents(rawData.size());
         initializeUnionFind();
     }
 
+    /**
+     * Groups the rows based on shared non-empty column values.
+     * Rows with the same non-zero value in the same column are grouped together.
+     *
+     * @return a list of groups, where each group is a list of rows (each row is a list of column values).
+     */
     public List<List<List<Long>>> groupValues() {
         Map<Integer, List<List<Long>>> groupedRows = groupRowsByRoot();
         sortGroups(groupedRows);
