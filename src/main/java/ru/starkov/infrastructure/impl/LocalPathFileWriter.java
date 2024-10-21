@@ -1,6 +1,7 @@
 package ru.starkov.infrastructure.impl;
 
 import ru.starkov.infrastructure.PathFileWriter;
+import ru.starkov.model.DataType;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -8,34 +9,31 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of the PathFileWriter interface for writing a Map of groups
- * to a file, where each group is sorted by size and its contents are formatted with quotes.
+ * Universal implementation of the PathFileWriter interface for writing data of any type to a file.
+ * The groups are sorted and their contents are formatted as strings.
  * <p>
  * If the output path is not specified, the file will be created in the current directory.
  */
-public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>>> {
+public class LocalPathFileWriter<T> implements PathFileWriter<List<List<List<T>>>> {
 
-    private static final String FORMATTED_EMPTY_STRING = "\"           \"";
-    private static final String FORMATTED_VALUE_STRING = "\"%d\"";
     private static final String DEFAULT_OUTPUT_FILE = "output.txt";
 
     /**
-     * Writes a Map of integer keys and Set of List of Longs to a file.
-     * The groups are sorted by size in descending order, and each list is
-     * formatted by wrapping its elements in quotes.
+     * Writes a list of grouped data to a file.
      * <p>
      * If the output path is not specified, the file will be created in the current directory.
      *
-     * @param groups     the map of groups to write to the file
+     * @param groups     the list of groups to write to the file
      * @param outputPath the path to the output file; if null or empty, the file will be created in the current directory
      * @throws IOException if an I/O error occurs during file writing
      */
     @Override
-    public void writeToTxtFile(List<List<List<Long>>> groups, String outputPath, Duration executionTime) throws IOException {
+    public void writeToTxtFile(List<List<List<T>>> groups, String outputPath, Duration executionTime, DataType dataType) throws IOException {
         String filePath = Optional.ofNullable(outputPath)
                 .filter(path -> !path.isEmpty())
                 .orElse(DEFAULT_OUTPUT_FILE);
@@ -44,7 +42,7 @@ public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>
             int groupCounter = 1;
 
             long groupsWithTwoOrMoreElements = groups.stream()
-                    .filter(longs -> longs.size() > 1)
+                    .filter(group -> group.size() > 1)
                     .count();
 
             writer.write(String.format("Number of groups with more than 1 element: %d%n", groupsWithTwoOrMoreElements));
@@ -52,8 +50,8 @@ public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>
                     executionTime.get(ChronoUnit.SECONDS)));
             writer.write(System.lineSeparator());
 
-            for (List<List<Long>> group : groups) {
-                writeGroup(writer, group, groupCounter++);
+            for (List<List<T>> group : groups) {
+                writeGroup(writer, group, groupCounter++, dataType);
             }
         } catch (IOException e) {
             System.err.printf("Error writing to file: %s", filePath);
@@ -61,31 +59,43 @@ public class LocalPathFileWriter implements PathFileWriter<List<List<List<Long>>
         }
     }
 
-    /**
-     * Writes a single group to the file.
-     *
-     * @param writer       the BufferedWriter used for file output
-     * @param group        the list of lists representing the group
-     * @param groupCounter the number of the group
-     * @throws IOException if an I/O error occurs during writing
-     */
-    private void writeGroup(BufferedWriter writer, List<List<Long>> group, int groupCounter) throws IOException {
+    private void writeGroup(BufferedWriter writer, List<List<T>> group, int groupCounter, DataType dataType) throws IOException {
         writer.write(String.format("Group %d:%n", groupCounter));
-        for (List<Long> line : group) {
-            writer.write(formatLine(line) + System.lineSeparator());
+        for (List<T> line : group) {
+            writer.write(formatLine(line, dataType) + System.lineSeparator());
         }
         writer.write(System.lineSeparator());  // Add an empty line between groups for readability
     }
 
-    /**
-     * Formats a single line by wrapping its elements in quotes.
-     *
-     * @param line the list of Longs to format
-     * @return a formatted string of the line
-     */
-    private String formatLine(List<Long> line) {
-        return line.stream()
-                .map(element -> element == 0L ? FORMATTED_EMPTY_STRING : String.format(FORMATTED_VALUE_STRING, element))
-                .collect(Collectors.joining(";"));
+    private String formatLine(List<T> line, DataType dataType) {
+        switch (dataType) {
+            case LONG -> {
+                return line.stream()
+                        .map(obj -> (Long) obj)
+                        .map(Objects::toString)
+                        .map(string -> {
+                            if (string.equals("0")) {
+                                return "\"           \"";
+                            }
+                            return String.format("\"%s\"", string);
+                        }).collect(Collectors.joining(";"));
+            }
+            case DOUBLE -> {
+                return line.stream()
+                        .map(obj -> (Double) obj)
+                        .map(Objects::toString)
+                        .map(string -> {
+                            if (string.equals("0")) {
+                                return "\"\"";
+                            }
+                            return String.format("\"%s\"", string);
+                        }).collect(Collectors.joining(";"));
+            }
+            default -> {
+                return line.stream()
+                        .map(Object::toString)
+                        .collect(Collectors.joining(";"));
+            }
+        }
     }
 }
