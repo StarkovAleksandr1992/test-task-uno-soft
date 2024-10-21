@@ -2,13 +2,19 @@ package ru.starkov;
 
 import ru.starkov.infrastructure.impl.LocalFileLoader;
 import ru.starkov.infrastructure.impl.LocalPathFileWriter;
+import ru.starkov.model.DataType;
+import ru.starkov.service.DynamicTypeDetector;
+import ru.starkov.service.IsNotEmptyFunctionProvider;
 import ru.starkov.service.UnionFind;
-import ru.starkov.service.ValidLinesExtractor;
+import ru.starkov.service.ValidDataExtractor;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Main {
 
@@ -16,25 +22,66 @@ public class Main {
         final var startTime = LocalTime.now();
 
         final var fileLoader = new LocalFileLoader();
-        final var fileWriter = new LocalPathFileWriter();
-        final var validStringExtractor = new ValidLinesExtractor();
-
         final var file = fileLoader.loadFile(args[0]);
-        final var validNumbers = validStringExtractor.getValidNumbers(file);
 
-        final var unionFind = new UnionFind(validNumbers);
-        final var groupedValues = unionFind.groupValues();
+        final var dataType = DynamicTypeDetector.determineDataType(file);
 
+        switch (dataType) {
+            case STRING -> processData(
+                    file,
+                    startTime,
+                    dataType,
+                    s -> s.replaceAll("^\"|\"$", ""),
+                    s -> !s.isEmpty()
+            );
+            case LONG -> processData(
+                    file,
+                    startTime,
+                    dataType,
+                    s -> s.isEmpty() ? 0L : Long.parseLong(s),
+                    s -> s.matches("^\"\\d*\"$")
+            );
+            case DOUBLE -> processData(
+                    file,
+                    startTime,
+                    dataType,
+                    s -> s.isEmpty() ? 0.0 : Double.parseDouble(s),
+                    s -> s.matches("^\"\\d+(\\.\\d+\"$)?")
+            );
+        }
+    }
+
+    private static <T> void processData(
+            File file,
+            LocalTime startTime,
+            DataType dataType,
+            Function<String, T> parseFunction,
+            Predicate<String> validationPredicate
+    ) throws IOException {
+        final var validDataExtractor = new ValidDataExtractor<>(
+                parseFunction,
+                validationPredicate
+        );
+        final var validData = validDataExtractor.getValidData(file);
+        final var unionFind = new UnionFind<>(
+                validData,
+                IsNotEmptyFunctionProvider.getIsNotEmptyPredicate(dataType)
+        );
+        final var groupedData = unionFind.groupValues();
         final var endTime = LocalTime.now();
 
-        fileWriter.writeToTxtFile(groupedValues,
+        final var duration = Duration.between(startTime, endTime);
+        final var fileWriter = new LocalPathFileWriter<T>();
+        fileWriter.writeToTxtFile(
+                groupedData,
                 "Output.txt",
-                Duration.between(startTime, endTime));
-        System.out.printf("Job done. Execution time: %d seconds%n",
-                Duration.between(startTime, LocalTime.now()).get(ChronoUnit.SECONDS));
-        System.out.printf("Number of groups with more than 1 element: %d%n", groupedValues.stream()
-                .filter(longs -> longs.size() > 1)
-                .count());
-
+                duration,
+                dataType
+        );
+        System.out.printf("Job done. Execution time: %d seconds%n", duration.getSeconds());
+        System.out.printf(
+                "Number of groups with more than 1 element: %d%n",
+                groupedData.stream().filter(group -> group.size() > 1).count()
+        );
     }
 }
