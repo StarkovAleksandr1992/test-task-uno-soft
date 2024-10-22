@@ -31,9 +31,11 @@ public class LocalFileLoader implements FileLoader {
         if (!Files.isRegularFile(path)) {
             throw new IllegalArgumentException("Provided path is not a file: " + filePath);
         }
-        if (!filePath.toLowerCase().endsWith(".txt")) {
-            throw new IllegalArgumentException("Unsupported file format. Expected a file with .txt extension: " + filePath);
+        filePath = filePath.toLowerCase();
+        if (!filePath.endsWith(".txt") && !filePath.endsWith(".csv")) {
+            throw new IllegalArgumentException("Unsupported file format. Expected a file with .txt or .csv extension: " + filePath);
         }
+
         if (!Files.isReadable(path)) {
             throw new IllegalArgumentException("File is not readable: " + filePath);
         }
