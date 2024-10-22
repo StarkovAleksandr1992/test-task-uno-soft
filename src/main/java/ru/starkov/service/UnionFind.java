@@ -35,9 +35,9 @@ public class UnionFind<T> {
     }
 
     /**
-     * Группирует строки на основе общих непустых значений столбцов.
+     * Groups rows based on shared non-empty column values.
      *
-     * @return список групп, где каждая группа — это список строк.
+     * @return a list of groups, where each group is a list of rows.
      */
     public List<List<List<T>>> groupValues() {
         Map<Integer, List<List<T>>> groupedRows = groupRowsByRoot();
