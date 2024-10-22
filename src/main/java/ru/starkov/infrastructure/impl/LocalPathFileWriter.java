@@ -82,14 +82,14 @@ public class LocalPathFileWriter<T> implements PathFileWriter<List<List<List<T>>
             }
             case DOUBLE -> {
                 return line.stream()
-                        .map(obj -> (Double) obj)
-                        .map(Objects::toString)
-                        .map(string -> {
-                            if (string.equals("0")) {
-                                return "\"\"";
+                        .map(obj -> (Double) obj)  // Преобразуем объект в Double
+                        .map(d -> {
+                            if (d == 0) {  // Если число равно 0
+                                return "\"\"";  // Возвращаем пустую строку
                             }
-                            return String.format("\"%s\"", string);
-                        }).collect(Collectors.joining(";"));
+                            return String.format("\"%.1f\"", d);  // Форматируем число с одной цифрой после запятой
+                        })
+                        .collect(Collectors.joining(";"));
             }
             default -> {
                 return line.stream()
